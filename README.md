@@ -1,6 +1,6 @@
 VirtualApp在2017年已停止更新，而随着Android os的升级，VA未能同步更新导致出现问题。目前会将VA同步适配到Android 9.0，并提供更多的插件。
 
-# #####   VA原文档  ########## #
+# --------------- 分割线 --------------- #
 
 
 [English Doc](README_eng.md "English")
