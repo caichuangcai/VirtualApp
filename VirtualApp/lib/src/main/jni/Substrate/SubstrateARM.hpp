@@ -41,6 +41,8 @@ enum A$c {
     A$lo = A$cc
 };
 
+#define abs(a) (a > 0 ? a : -a)
+
 #define A$mrs_rm_cpsr(rd) /* mrs rd, cpsr */ \
     (0xe10f0000 | ((rd) << 12))
 #define A$msr_cpsr_f_rm(rm) /* msr cpsr_f, rm */ \

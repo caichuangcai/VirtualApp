@@ -1,5 +1,7 @@
 package mirror;
 
+import com.lody.virtual.helper.utils.VLog;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -49,6 +51,11 @@ public final class RefClass {
             }
             catch (Exception e) {
                 // Ignore
+                // Ignore
+                VLog.e("RefClass exception", mappingClass.getName()+", field name: "+field.getName()+", exception: "+e.getMessage()+" , "+e.getCause().getMessage());
+                VLog.e("RefClass", "================ Stack trace ====================");
+                e.printStackTrace();
+                VLog.e("RefClass", "================ Stack trace End ====================");
             }
         }
         return realClass;

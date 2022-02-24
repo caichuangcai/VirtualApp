@@ -19,6 +19,7 @@ import com.lody.virtual.os.VUserHandle;
 
 import java.io.File;
 
+import mirror.android.content.pm.PackageParser28;
 import mirror.android.content.pm.PackageParserJellyBean;
 import mirror.android.content.pm.PackageParserJellyBean17;
 import mirror.android.content.pm.PackageParserLollipop;
@@ -33,6 +34,7 @@ import static android.os.Build.VERSION_CODES.LOLLIPOP;
 import static android.os.Build.VERSION_CODES.LOLLIPOP_MR1;
 import static android.os.Build.VERSION_CODES.M;
 import static android.os.Build.VERSION_CODES.N;
+import static android.os.Build.VERSION_CODES.P;
 
 /**
  * @author Lody
@@ -47,7 +49,9 @@ public class PackageParserCompat {
 
 
     public static PackageParser createParser(File packageFile) {
-        if (API_LEVEL >= M) {
+        if(API_LEVEL >= P) {
+            return PackageParser28.ctor.newInstance();
+        } else if (API_LEVEL >= M) {
             return PackageParserMarshmallow.ctor.newInstance();
         } else if (API_LEVEL >= LOLLIPOP_MR1) {
             return PackageParserLollipop22.ctor.newInstance();
@@ -63,7 +67,9 @@ public class PackageParserCompat {
     }
 
     public static Package parsePackage(PackageParser parser, File packageFile, int flags) throws Throwable {
-        if (API_LEVEL >= M) {
+        if(API_LEVEL >= P) {
+            return PackageParser28.parsePackage.callWithException(parser, packageFile, flags);
+        } else if (API_LEVEL >= M) {
             return PackageParserMarshmallow.parsePackage.callWithException(parser, packageFile, flags);
         } else if (API_LEVEL >= LOLLIPOP_MR1) {
             return PackageParserLollipop22.parsePackage.callWithException(parser, packageFile, flags);
@@ -82,7 +88,9 @@ public class PackageParserCompat {
     }
 
     public static ServiceInfo generateServiceInfo(Service service, int flags) {
-        if (API_LEVEL >= M) {
+        if(API_LEVEL >= P) {
+            return PackageParser28.generateServiceInfo.call(service, flags, sUserState, myUserId);
+        } else if (API_LEVEL >= M) {
             return PackageParserMarshmallow.generateServiceInfo.call(service, flags, sUserState, myUserId);
         } else if (API_LEVEL >= LOLLIPOP_MR1) {
             return PackageParserLollipop22.generateServiceInfo.call(service, flags, sUserState, myUserId);
@@ -98,7 +106,9 @@ public class PackageParserCompat {
     }
 
     public static ApplicationInfo generateApplicationInfo(Package p, int flags) {
-        if (API_LEVEL >= M) {
+        if(API_LEVEL >= P) {
+            return PackageParser28.generateApplicationInfo.call(p, flags, sUserState);
+        } else if (API_LEVEL >= M) {
             return PackageParserMarshmallow.generateApplicationInfo.call(p, flags, sUserState);
         } else if (API_LEVEL >= LOLLIPOP_MR1) {
             return PackageParserLollipop22.generateApplicationInfo.call(p, flags, sUserState);
@@ -114,7 +124,9 @@ public class PackageParserCompat {
     }
 
     public static ActivityInfo generateActivityInfo(Activity activity, int flags) {
-        if (API_LEVEL >= M) {
+        if(API_LEVEL >= P) {
+            return PackageParser28.generateActivityInfo.call(activity, flags, sUserState, myUserId);
+        } else if (API_LEVEL >= M) {
             return PackageParserMarshmallow.generateActivityInfo.call(activity, flags, sUserState, myUserId);
         } else if (API_LEVEL >= LOLLIPOP_MR1) {
             return PackageParserLollipop22.generateActivityInfo.call(activity, flags, sUserState, myUserId);
@@ -130,7 +142,9 @@ public class PackageParserCompat {
     }
 
     public static ProviderInfo generateProviderInfo(Provider provider, int flags) {
-        if (API_LEVEL >= M) {
+        if(API_LEVEL >= P) {
+            return PackageParser28.generateProviderInfo.call(provider, flags, sUserState, myUserId);
+        } else if (API_LEVEL >= M) {
             return PackageParserMarshmallow.generateProviderInfo.call(provider, flags, sUserState, myUserId);
         } else if (API_LEVEL >= LOLLIPOP_MR1) {
             return PackageParserLollipop22.generateProviderInfo.call(provider, flags, sUserState, myUserId);
@@ -146,7 +160,10 @@ public class PackageParserCompat {
     }
 
     public static PackageInfo generatePackageInfo(Package p, int flags, long firstInstallTime, long lastUpdateTime) {
-        if (API_LEVEL >= M) {
+        if(API_LEVEL >= P) {
+            return PackageParser28.generatePackageInfo.call(p, GIDS, flags, firstInstallTime, lastUpdateTime,
+                    null, sUserState);
+        } else if (API_LEVEL >= M) {
             return PackageParserMarshmallow.generatePackageInfo.call(p, GIDS, flags, firstInstallTime, lastUpdateTime,
                     null, sUserState);
         } else if (API_LEVEL >= LOLLIPOP) {
@@ -170,7 +187,9 @@ public class PackageParserCompat {
     }
 
     public static void collectCertificates(PackageParser parser, Package p, int flags) throws Throwable {
-        if (API_LEVEL >= N) {
+        if(API_LEVEL >= P) {
+            PackageParser28.collectCertificates.callWithException(parser, p, true /* skipVerify: 默认传true */);
+        } else if (API_LEVEL >= N) {
             PackageParserNougat.collectCertificates.callWithException(p, flags);
         } else if (API_LEVEL >= M) {
             PackageParserMarshmallow.collectCertificates.callWithException(parser, p, flags);
