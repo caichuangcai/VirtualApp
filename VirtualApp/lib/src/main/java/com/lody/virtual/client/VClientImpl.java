@@ -64,10 +64,12 @@ import mirror.android.app.ActivityThreadNMR1;
 import mirror.android.app.ContextImpl;
 import mirror.android.app.ContextImplKitkat;
 import mirror.android.app.IActivityManager;
+import mirror.android.app.LoadApk;
 import mirror.android.app.LoadedApk;
 import mirror.android.app.LoadedApkICS;
 import mirror.android.app.LoadedApkKitkat;
 import mirror.android.content.ContentProviderHolderOreo;
+import mirror.android.content.pm.ApplicationInfoP;
 import mirror.android.content.res.CompatibilityInfo;
 import mirror.android.providers.Settings;
 import mirror.android.renderscript.RenderScriptCacheDir;
@@ -79,8 +81,8 @@ import mirror.android.view.ThreadedRenderer;
 import mirror.com.android.internal.content.ReferrerIntent;
 import mirror.dalvik.system.VMRuntime;
 import mirror.java.lang.ThreadGroupN;
-
 import static com.lody.virtual.os.VUserHandle.getUserId;
+import static android.os.Build.VERSION_CODES.P;
 
 /**
  * @author Lody
@@ -186,6 +188,7 @@ public final class VClientImpl extends IVClient.Stub {
         } else {
             intent = data.intent;
         }
+
         if (ActivityThread.performNewIntents != null) {
             ActivityThread.performNewIntents.call(
                     VirtualCore.mainThread(),
@@ -253,26 +256,33 @@ public final class VClientImpl extends IVClient.Stub {
         mBoundApplication = data;
         VirtualRuntime.setupRuntime(data.processName, data.appInfo);
         int targetSdkVersion = data.appInfo.targetSdkVersion;
-        if (targetSdkVersion < Build.VERSION_CODES.GINGERBREAD) {
+        if (targetSdkVersion < Build.VERSION_CODES.GINGERBREAD)
+        {
             StrictMode.ThreadPolicy newPolicy = new StrictMode.ThreadPolicy.Builder(StrictMode.getThreadPolicy()).permitNetwork().build();
             StrictMode.setThreadPolicy(newPolicy);
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && targetSdkVersion < Build.VERSION_CODES.LOLLIPOP) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && targetSdkVersion < Build.VERSION_CODES.LOLLIPOP)
+        {
             mirror.android.os.Message.updateCheckRecycle.call(targetSdkVersion);
         }
-        if (VASettings.ENABLE_IO_REDIRECT) {
+
+        /**
+         * IO重定向代码有问题
+         * */
+        /*if (VASettings.ENABLE_IO_REDIRECT) {
             startIOUniformer();
-        }
+        }*/
+
         NativeEngine.launchEngine();
         Object mainThread = VirtualCore.mainThread();
         NativeEngine.startDexOverride();
-        Context context = createPackageContext(data.appInfo.packageName);
-        System.setProperty("java.io.tmpdir", context.getCacheDir().getAbsolutePath());
+        Context remoteContext = createPackageContext(data.appInfo.packageName);
+        System.setProperty("java.io.tmpdir", remoteContext.getCacheDir().getAbsolutePath());
         File codeCacheDir;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            codeCacheDir = context.getCodeCacheDir();
+            codeCacheDir = remoteContext.getCodeCacheDir();
         } else {
-            codeCacheDir = context.getCacheDir();
+            codeCacheDir = remoteContext.getCacheDir();
         }
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
@@ -293,17 +303,23 @@ public final class VClientImpl extends IVClient.Stub {
                 RenderScript.setupDiskCache.call(codeCacheDir);
             }
         }
+
         Object boundApp = fixBoundApp(mBoundApplication);
-        mBoundApplication.info = ContextImpl.mPackageInfo.get(context);
-        mirror.android.app.ActivityThread.AppBindData.info.set(boundApp, data.info);
+
+        mBoundApplication.info = ContextImpl.mPackageInfo.get(remoteContext);
+
+        //  Fix LoadedApk.mApplicationInfo.sourceDir
+        ApplicationInfo applicationInfo = LoadApk.mApplicationInfo.get(mBoundApplication.info);
+        ApplicationInfoP.splitNames.set(applicationInfo, new String[]{ApplicationInfoP.sourceDir.get(applicationInfo)});
+
+        mirror.android.app.ActivityThread.AppBindData.info.set(boundApp, mBoundApplication.info);
+
         VMRuntime.setTargetSdkVersion.call(VMRuntime.getRuntime.call(), data.appInfo.targetSdkVersion);
 
-        Configuration configuration = context.getResources().getConfiguration();
+        Configuration configuration = remoteContext.getResources().getConfiguration();
         Object compatInfo = CompatibilityInfo.ctor.newInstance(data.appInfo, configuration.screenLayout, configuration.smallestScreenWidthDp, false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-                DisplayAdjustments.setCompatibilityInfo.call(ContextImplKitkat.mDisplayAdjustments.get(context), compatInfo);
-            }
+
             DisplayAdjustments.setCompatibilityInfo.call(LoadedApkKitkat.mDisplayAdjustments.get(mBoundApplication.info), compatInfo);
         } else {
             CompatibilityInfoHolder.set.call(LoadedApkICS.mCompatibilityInfo.get(mBoundApplication.info), compatInfo);
@@ -313,8 +329,11 @@ public final class VClientImpl extends IVClient.Stub {
         if (!conflict) {
             InvocationStubManager.getInstance().checkEnv(AppInstrumentation.class);
         }
-        mInitialApplication = LoadedApk.makeApplication.call(data.info, false, null);
+
+        mInitialApplication = LoadedApk.makeApplication.call(mBoundApplication.info, false, null);
+
         mirror.android.app.ActivityThread.mInitialApplication.set(mainThread, mInitialApplication);
+
         ContextFixer.fixContext(mInitialApplication);
         if (Build.VERSION.SDK_INT >= 24 && "com.tencent.mm:recovery".equals(processName)) {
             fixWeChatRecovery(mInitialApplication);
@@ -406,6 +425,8 @@ public final class VClientImpl extends IVClient.Stub {
         NativeEngine.redirectDirectory("/sys/class/net/wlan0/address", wifiMacAddressFile);
         NativeEngine.redirectDirectory("/sys/class/net/eth0/address", wifiMacAddressFile);
         NativeEngine.redirectDirectory("/sys/class/net/wifi/address", wifiMacAddressFile);
+
+        VLog.e("startIOUniformer", "packageName: "+info.packageName+" , dataDir: "+info.dataDir);
 
         NativeEngine.redirectDirectory("/data/data/" + info.packageName, info.dataDir);
         NativeEngine.redirectDirectory("/data/user/0/" + info.packageName, info.dataDir);

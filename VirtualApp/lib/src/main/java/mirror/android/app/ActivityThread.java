@@ -39,9 +39,12 @@ public class ActivityThread {
     public static RefObject<Handler> mH;
     public static RefObject<Application> mInitialApplication;
     public static RefObject<Instrumentation> mInstrumentation;
-    public static RefObject<Map<String, WeakReference<?>>> mPackages;
+
+    //public static RefObject<Map<String, WeakReference<?>>> mPackages;
+
     public static RefObject<Map> mProviderMap;
-    @MethodParams({IBinder.class, List.class})
+
+    @MethodParams({IBinder.class, List.class, boolean.class})
     public static RefMethod<Void> performNewIntents;
     public static RefStaticObject<IInterface> sPackageManager;
     @MethodParams({IBinder.class, String.class, int.class, int.class, Intent.class})
@@ -95,8 +98,9 @@ public class ActivityThread {
 
     public static class H {
         public static Class<?> TYPE = RefClass.load(H.class, "android.app.ActivityThread$H");
-        public static RefStaticInt LAUNCH_ACTIVITY;
+
         public static RefStaticInt CREATE_SERVICE;
         public static RefStaticInt SCHEDULE_CRASH;
+        public static RefStaticInt EXECUTE_TRANSACTION;
     }
 }

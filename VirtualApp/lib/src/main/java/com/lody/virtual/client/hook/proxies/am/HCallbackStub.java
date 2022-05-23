@@ -8,6 +8,7 @@ import android.content.pm.ServiceInfo;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.util.Log;
 
 import com.lody.virtual.client.VClientImpl;
 import com.lody.virtual.client.core.VirtualCore;
@@ -19,9 +20,16 @@ import com.lody.virtual.helper.utils.VLog;
 import com.lody.virtual.remote.InstalledAppInfo;
 import com.lody.virtual.remote.StubActivityRecord;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Set;
+
 import mirror.android.app.ActivityManagerNative;
 import mirror.android.app.ActivityThread;
 import mirror.android.app.IActivityManager;
+import mirror.android.app.servertransaction.ClientTransaction;
+import mirror.android.app.servertransaction.LaunchActivityItem;
 
 /**
      * @author Lody
@@ -29,11 +37,11 @@ import mirror.android.app.IActivityManager;
      */
     public class HCallbackStub implements Handler.Callback, IInjector {
 
-
-        private static final int LAUNCH_ACTIVITY = ActivityThread.H.LAUNCH_ACTIVITY.get();
         private static final int CREATE_SERVICE = ActivityThread.H.CREATE_SERVICE.get();
         private static final int SCHEDULE_CRASH =
                 ActivityThread.H.SCHEDULE_CRASH != null ? ActivityThread.H.SCHEDULE_CRASH.get() : -1;
+        static private final int EXECUTE_TRANSACTION =
+                ActivityThread.H.EXECUTE_TRANSACTION != null ? ActivityThread.H.EXECUTE_TRANSACTION.get() : -1;
 
         private static final String TAG = HCallbackStub.class.getSimpleName();
         private static final HCallbackStub sCallback = new HCallbackStub();
@@ -69,16 +77,16 @@ import mirror.android.app.IActivityManager;
             if (!mCalling) {
                 mCalling = true;
                 try {
-                    if (LAUNCH_ACTIVITY == msg.what) {
-                        if (!handleLaunchActivity(msg)) {
-                            return true;
-                        }
-                    } else if (CREATE_SERVICE == msg.what) {
+                    if(EXECUTE_TRANSACTION == msg.what) {
+                        handleLaunchActivityInPie(msg);
+                    }
+                    else if (CREATE_SERVICE == msg.what) {
                         if (!VClientImpl.get().isBound()) {
                             ServiceInfo info = Reflect.on(msg.obj).get("info");
                             VClientImpl.get().bindApplication(info.packageName, info.processName);
                         }
-                    } else if (SCHEDULE_CRASH == msg.what) {
+                    }
+                    else if (SCHEDULE_CRASH == msg.what) {
                         // to avoid the exception send from System.
                         return true;
                     }
@@ -96,18 +104,38 @@ import mirror.android.app.IActivityManager;
             return false;
         }
 
-        private boolean handleLaunchActivity(Message msg) {
+        private boolean handleLaunchActivityInPie(Message msg) {
             Object r = msg.obj;
-            Intent stubIntent = ActivityThread.ActivityClientRecord.intent.get(r);
-            StubActivityRecord saveInstance = new StubActivityRecord(stubIntent);
+            if(r == null) {
+                return true;
+            }
+
+            IBinder mActivityToken = ClientTransaction.mActivityToken.get(r);
+            List<?> mActivityCallbacks = ClientTransaction.mActivityCallbacks.get(r);
+            for(Object item : mActivityCallbacks) {
+                if(item == null) {
+                    continue;
+                }
+                if(item.getClass().getName().endsWith("LaunchActivityItem")) {
+                    Intent mLaunchIntent = LaunchActivityItem.mIntent.get(item);
+                    return handleLaunchActivity(msg, mLaunchIntent, mActivityToken, item);
+                }
+            }
+
+            return true;
+        }
+
+        private boolean handleLaunchActivity(Message msg, Intent subIntent, IBinder token, Object launchActivityItem) {
+            StubActivityRecord saveInstance = new StubActivityRecord(subIntent);
             if (saveInstance.intent == null) {
                 return true;
             }
             Intent intent = saveInstance.intent;
             ComponentName caller = saveInstance.caller;
-            IBinder token = ActivityThread.ActivityClientRecord.token.get(r);
             ActivityInfo info = saveInstance.info;
-            if (VClientImpl.get().getToken() == null) {
+
+            if (VClientImpl.get().getToken() == null)
+            {
                 InstalledAppInfo installedAppInfo = VirtualCore.get().getInstalledAppInfo(info.packageName, 0);
                 if(installedAppInfo == null){
                     return true;
@@ -116,11 +144,13 @@ import mirror.android.app.IActivityManager;
                 getH().sendMessageAtFrontOfQueue(Message.obtain(msg));
                 return false;
             }
+
             if (!VClientImpl.get().isBound()) {
                 VClientImpl.get().bindApplication(info.packageName, info.processName);
                 getH().sendMessageAtFrontOfQueue(Message.obtain(msg));
                 return false;
             }
+
             int taskId = IActivityManager.getTaskForActivity.call(
                     ActivityManagerNative.getDefault.call(),
                     token,
@@ -129,8 +159,8 @@ import mirror.android.app.IActivityManager;
             VActivityManager.get().onActivityCreate(ComponentUtils.toComponentName(info), caller, token, info, intent, ComponentUtils.getTaskAffinity(info), taskId, info.launchMode, info.flags);
             ClassLoader appClassLoader = VClientImpl.get().getClassLoader(info.applicationInfo);
             intent.setExtrasClassLoader(appClassLoader);
-            ActivityThread.ActivityClientRecord.intent.set(r, intent);
-            ActivityThread.ActivityClientRecord.activityInfo.set(r, info);
+            LaunchActivityItem.mIntent.set(launchActivityItem, intent);
+            LaunchActivityItem.mInfo.set(launchActivityItem, info);
             return true;
         }
 

@@ -637,6 +637,7 @@ int findSymbol(const char *name, const char *libn,
 }
 
 void hook_dlopen(int api_level) {
+    ALOGE("hook_dlopen  api_level: %d", api_level);
     void *symbol = NULL;
     if (api_level > 23) {
         if (findSymbol("__dl__Z9do_dlopenPKciPK17android_dlextinfoPv", "linker",
@@ -667,7 +668,12 @@ void IOUniformer::startUniformer(const char *so_path, int api_level, int preview
     sprintf(api_level_chars, "%i", preview_api_level);
     setenv("V_PREVIEW_API_LEVEL", api_level_chars, 1);
 
+    ALOGE("so_path: %s, api_level: %i", so_path, api_level);
+
     void *handle = dlopen("libc.so", RTLD_NOW);
+
+    ALOGE("dlopen handle: %d", handle);
+
     if (handle) {
         HOOK_SYMBOL(handle, faccessat);
         HOOK_SYMBOL(handle, __openat);

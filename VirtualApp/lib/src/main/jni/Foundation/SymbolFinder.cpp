@@ -205,16 +205,25 @@ static symtab_t load_symtab(char *filename) {
     symtab = (symtab_t) xmalloc(sizeof(*symtab));
     memset(symtab, 0, sizeof(*symtab));
 
+    ALOGE("load_symtab  open file: %s", filename);
+
     fd = open(filename, O_RDONLY);
+
+    ALOGE("load_symtab  open file fd: %d", fd);
+
     if (0 > fd) {
         ALOGE("%s open\n", __func__);
         return NULL;
     }
+
     if (0 > do_load(fd, symtab)) {
         ALOGE("Error ELF parsing %s\n", filename);
         free(symtab);
         symtab = NULL;
     }
+
+    ALOGE("load_symtab  do_load fd: %d", fd);
+
     close(fd);
     return symtab;
 }
@@ -232,12 +241,18 @@ static int load_memmap(pid_t pid, struct mm *mm, int *nmmp) {
     int i;
 
     sprintf(p_buf, "/proc/%d/maps", pid);
+
+    ALOGE("load_memmap p_buf: %s, pid: %d", p_buf, pid);
+
     fd = open(p_buf, O_RDONLY);
+
     if (0 > fd) {
         ALOGE("Can't open %s for reading\n", p_buf);
         free(p_buf);
         return -1;
     }
+
+    ALOGE("load_memmap after");
 
     /* Zero to ensure data is null terminated */
     memset(p_buf, 0, buf_size);
@@ -378,16 +393,24 @@ static int lookup_func_sym(symtab_t s, char *name, unsigned long *val) {
 
 int find_name(pid_t pid, const char *name, const char *libn,
               unsigned long *addr) {
+
+    ALOGE("find_name   pid: %d, name: %s, libn: %s, addr: %lld", pid, name, libn, addr);
+
     struct mm mm[1000] = { 0 };
     unsigned long libcaddr;
     int nmm;
     char libc[1024] = { 0 };
     symtab_t s;
 
+    ALOGE("find_name  load_memmap before");
+
     if (0 > load_memmap(pid, mm, &nmm)) {
         ALOGD("cannot read memory map\n");
         return -1;
     }
+
+    ALOGE("find_name  load_memmap after");
+
     if (0
         > find_libname((char *) libn, (char *) libc, sizeof(libc),
                        &libcaddr, mm, nmm)) {
