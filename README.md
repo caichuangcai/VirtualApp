@@ -1,7 +1,8 @@
-VirtualApp在2017年已停止更新，而随着Android os的升级，VA未能同步更新导致出现问题。目前会将VA同步适配到Android 9.0，Gradle升级到4.0.0，后续会提供更丰富的插件sdk。
+VirtualApp开源版在2017年已停止更新，而随着Android os的升级，VA部分功能受到影响，未能同步更新导致出现问题。目前会将VA同步适配到Android 9.0。
 
-Feature:
-1.虚拟定位
+更新：
+1.支持Android P的Activity launch流程
+2.修复运行问题
 
 # --------------- 分割线 --------------- #
 
